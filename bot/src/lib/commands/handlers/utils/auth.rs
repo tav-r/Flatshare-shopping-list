@@ -15,9 +15,9 @@ pub fn authenticate(chat_id: i64, password: &str) -> Result<&'static str, Box<dy
             |mut conn| {
                 if hex_digest(Algorithm::SHA512, password.as_bytes()) == env::var("BOT_PASSWORD_HASH").unwrap() {
                     conn.rpush("auth", chat_id)?;
-                    Ok("Authentisiert!")
+                    Ok("Authentisiert\\!")
                 } else {
-                    Ok("Sorry, falsches Passwort...")
+                    Ok("Sorry, falsches Passwort\\.\\.\\.")
                 }
             }
         )?

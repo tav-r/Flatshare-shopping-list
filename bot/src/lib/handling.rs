@@ -12,6 +12,12 @@ use super::handlers::{
 };
 
 
+// return the function if chat_id is authenticated, otherwise return wrapped error string
+fn only_if_auth<Fn>(chat_id: i64, f: Fn) -> Result<Fn, &'static str> {
+    if authenticated(chat_id).unwrap() {Ok(f)} else {Err("Du bist nicht authentisiert")}
+}
+
+// main "loop"
 pub async fn handle_commands(
     cx: UpdateWithCx<Bot, Message>,
     command: Command,
@@ -19,52 +25,42 @@ pub async fn handle_commands(
     let tmsg = match command {
         Command::Hilfe => cx.answer(escape_special_chars(&Command::descriptions())),
         Command::Einkaufen(items) => {
-            let msg = if authenticated(cx.chat_id()).unwrap() {
-                String::from(buy_handler(
-                    items.split(",").map(|s| String::from(s.trim())).filter(|s| s.len() > 0)  // split for comma, trim parts
-                        .collect(),
-                    cx.chat_id()
-                ).await.unwrap_or_else(|msg| msg))
-            } else {
-                String::from("Du kannst nichts auf den Zettel schreiben, du bist nicht authentifiziert\\.")
-            };
+            let msg = only_if_auth(cx.chat_id(), || { buy_handler(
+                items.split(",").map(|s| String::from(s.trim())).filter(|s| s.len() > 0)  // split for comma, trim parts, filter empty strings
+                    .collect(),
+                cx.chat_id()
+            )});
 
-            cx.answer(msg)
+            cx.answer(match msg {Ok(f) => f().await.unwrap(), Err(m) => m})
         },
         Command::Authentifizieren(password) => {
-            let msg = String::from(authenticate_handler(cx.chat_id(), password).await.unwrap_or_else(|msg| {msg}));
-
-            cx.answer(msg)
+            cx.answer(String::from(authenticate_handler(cx.chat_id(), password).await.unwrap_or_else(|msg| {msg})))
         },
         Command::Einkaufszettel => {
-            let msg = if authenticated(cx.chat_id()).unwrap() {
-                String::from(show_handler(cx.chat_id()).await.unwrap_or_else(|msg| {String::from(msg)}))
-            } else {
-                String::from("Du hast keinen Einkaufszettel, du bist nicht authentifiziert\\.")
-            };
+            let msg = only_if_auth(cx.chat_id(), || {
+                show_handler(cx.chat_id())
+            });
 
-            cx.answer(msg)
+            cx.answer(match msg {Ok(f) => f().await.unwrap(), Err(m) => String::from(m)})
         },
         Command::Eingekauft(item) => {
-            if authenticated(cx.chat_id()).unwrap() {
-                bought_handler(item, cx.chat_id()).await
-                    .and_then(|r| match r {
-                        Some(kbd) => Ok(cx.answer("Was hast du eingekauft?").reply_markup(kbd)),
-                        None => Ok(cx.answer("Ist erledigt 🙂"))
-                    })
-                    .unwrap_or_else(|e| cx.answer(e))
-            } else {
-                cx.answer("Du kannst nichts vom Zettel streichen, du bist nicht authentifiziert\\.")
+            match only_if_auth(cx.chat_id(), || { bought_handler(item, cx.chat_id()) }) {
+                Ok(f) => {
+                    match f().await.unwrap() {
+                        Some(kbd) => cx.answer("Was hast du eingekauft?").reply_markup(kbd),
+                        None => cx.answer("Ist erledigt 🙂")
+                    }
+                },
+                Err(m) => cx.answer(m)
             }
         },
         Command::AllesEingekauft => {
-            let msg = if authenticated(cx.chat_id()).unwrap() {
-                String::from(all_bought_handler(cx.chat_id()).await.unwrap_or_else(|msg| {msg}))
-            } else {
-                String::from("Du kannst den Zettel nicht wegwerfen, du bist nicht authentifiziert\\.")
-            };
-
-            cx.answer(msg)
+            cx.answer(
+                match only_if_auth(cx.chat_id(), || { all_bought_handler(cx.chat_id()) }) {
+                    Ok(f) => f().await.unwrap(),
+                    Err(m) => m
+                }
+            )
        }
     };
 

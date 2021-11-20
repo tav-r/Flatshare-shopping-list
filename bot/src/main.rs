@@ -3,7 +3,7 @@ mod lib;
 extern crate redis;
 
 use teloxide::prelude::*;
-use lib::commands::{handling::handle_commands,Command};
+use lib::{handling::handle_commands,Command};
 use std::env;
 
 async fn run() {

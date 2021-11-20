@@ -1,0 +1,16 @@
+version: "3.2"
+services:
+  bot:
+    build: .
+    env_file: .env
+    volumes:
+      - /etc/localtime:/etc/localtime
+    restart: always
+
+  redis:
+    image: redis:alpine
+    hostname: redis
+    domainname: redis
+    volumes:
+      - /etc/localtime:/etc/localtime
+    restart: always

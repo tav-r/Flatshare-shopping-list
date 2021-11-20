@@ -14,7 +14,7 @@ use super::handlers::{
 
 // return the function if chat_id is authenticated, otherwise return wrapped error string
 fn only_if_auth<Fn>(chat_id: i64, f: Fn) -> Result<Fn, &'static str> {
-    if authenticated(chat_id).unwrap() {Ok(f)} else {Err("Du bist nicht authentisiert")}
+    if authenticated(chat_id).unwrap() {Ok(f)} else {Err("Du bist nicht authentifiziert")}
 }
 
 // main "loop"
@@ -31,37 +31,40 @@ pub async fn handle_commands(
                 cx.chat_id()
             )});
 
-            cx.answer(match msg {Ok(f) => f().await.unwrap(), Err(m) => m})
+            cx.answer(match msg {Ok(f) => f().await.unwrap_or_else(|e| e), Err(e) => e})
         },
         Command::Authentifizieren(password) => {
-            cx.answer(String::from(authenticate_handler(cx.chat_id(), password).await.unwrap_or_else(|msg| {msg})))
+            cx.answer(String::from(authenticate_handler(cx.chat_id(), password).await.unwrap_or_else(|e| {e})))
         },
         Command::Einkaufszettel => {
             let msg = only_if_auth(cx.chat_id(), || {
                 show_handler(cx.chat_id())
             });
 
-            cx.answer(match msg {Ok(f) => f().await.unwrap(), Err(m) => String::from(m)})
+            cx.answer(match msg {Ok(f) => f().await.unwrap_or_else(|e| String::from(e)), Err(e) => String::from(e)})
         },
         Command::Eingekauft(item) => {
             match only_if_auth(cx.chat_id(), || { bought_handler(item, cx.chat_id()) }) {
-                Ok(f) => {
-                    match f().await.unwrap() {
-                        Some(kbd) => cx.answer("Was hast du eingekauft?").reply_markup(kbd),
-                        None => cx.answer("Ist erledigt 🙂")
-                    }
+                Ok(f) => { f().await
+                    .and_then(|r|
+                        match r {
+                            Some(kbd) => Ok(cx.answer("Was hast du eingekauft?").reply_markup(kbd)),
+                            None => Ok(cx.answer("Ist erledigt 🙂"))
+                        }
+                    )
+                    .unwrap_or_else(|e| cx.answer(e))
                 },
-                Err(m) => cx.answer(m)
+                Err(e) => cx.answer(e)
             }
         },
         Command::AllesEingekauft => {
             cx.answer(
                 match only_if_auth(cx.chat_id(), || { all_bought_handler(cx.chat_id()) }) {
-                    Ok(f) => f().await.unwrap(),
-                    Err(m) => m
+                    Ok(f) => f().await.unwrap_or_else(|e| e),
+                    Err(e) => e
                 }
             )
-       }
+        }
     };
 
     tmsg.parse_mode(ParseMode::MarkdownV2).send().await?;

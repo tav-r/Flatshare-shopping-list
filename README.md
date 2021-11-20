@@ -1,5 +1,8 @@
 # Flatshare-shopping-list
 A telegram bot that implements a simple shared shopping list. The bot only talks German, I do not plan to change that in the future.
+
+![Screenshot](screenshot.png)
+
 ## Deploy
 It is really easy to deploy:
 1. Register a bot to obtain an API key (see [here](https://core.telegram.org/bots))

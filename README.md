@@ -1,5 +1,5 @@
 # Flatshare-shopping-list
-A telegram bot that implements a simple shared shopping list. The bot only talks German, I do not plan to change that in the future.
+A telegram bot that implements a simple shared shopping list. The bot only speaks German, I do not plan to change that in the future.
 
 ![Screenshot](screenshot.png)
 

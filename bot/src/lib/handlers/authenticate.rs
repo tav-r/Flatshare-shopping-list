@@ -1,7 +1,10 @@
 use super::utils::auth::{authenticate};
+use super::Answer;
 
-pub async fn authenticate_handler(chat_id: i64, password: String) -> Result<&'static str, &'static str> {
-    authenticate(chat_id, &password)
-        .and_then(|r| Ok(r))
-        .or_else(|_| Err("Error while authenticating"))
+
+pub fn authenticate_handler(password: String) -> Box<dyn Send + Fn(i64) -> Answer> {
+    Box::new(
+        move |chat_id: i64| Answer::StaticText(authenticate(chat_id, &password)
+            .unwrap_or("Error while authenticating"))
+    )
 }

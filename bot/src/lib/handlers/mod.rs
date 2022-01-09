@@ -1,3 +1,5 @@
+use teloxide::types::{KeyboardMarkup};
+
 mod all_bought;
 mod authenticate;
 mod buy;
@@ -21,4 +23,10 @@ pub fn escape_special_chars(message: &str) -> String {
     }
 
     new_str
+}
+
+pub enum Answer {
+    StaticText(&'static str),
+    DynText(String),
+    TextAndKeyboard(&'static str, KeyboardMarkup)
 }

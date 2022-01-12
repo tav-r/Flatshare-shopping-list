@@ -28,13 +28,17 @@ pub async fn handle_commands(
     cx: UpdateWithCx<Bot, Message>,
     command: Command,
 ) -> Result<(), Box<dyn Error + Send + Sync>> {
-    let process = match command {
+    // type annotations added for better readability
+    let process: Box<dyn Send + Fn(i64) -> Answer>  = match command {
         Command::Hilfe => Box::new(|_: i64| Answer::DynText(escape_special_chars(&Command::descriptions()))),
         Command::Einkaufen(items) => {
-            only_if_auth(buy_handler(
-                items.split(",").map(|s| String::from(s.trim())).filter(|s| s.len() > 0)  // split for comma, trim parts, filter empty strings
-                    .collect()
-            ))
+            let item_vec = items.split(",")  // split on commas
+                .map(|s| s.trim())  // trim parts
+                .filter(|s| s.len() > 0)  // filter empty strings
+                .map(|s| String::from(s))  // 'copy' slices into Strings
+                .collect();
+
+            only_if_auth(buy_handler(item_vec))
         },
         Command::Authentifizieren(password) => {
             authenticate_handler(password)
